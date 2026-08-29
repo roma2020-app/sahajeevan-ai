@@ -1,0 +1,6 @@
+{
+  "name": "Sahajeevan",
+  "description": "Small Moments. Strong Families. A Greener Future. An AI-powered family and nature companion designed for busy working parents.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

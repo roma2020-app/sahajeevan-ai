@@ -1,0 +1,59 @@
+{
+  "entities": {
+    "Moment": {
+      "title": "Moment",
+      "description": "A completed parent-child nature moment record",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique moment ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owning parent"
+        },
+        "activity": {
+          "type": "object",
+          "description": "The generated nature micro-activity details"
+        },
+        "completedAt": {
+          "type": "string",
+          "description": "ISO timestamp of completion"
+        },
+        "duration": {
+          "type": "string",
+          "description": "Time length (e.g. 10 min, 15 min, 30 min)"
+        },
+        "locationType": {
+          "type": "string",
+          "enum": ["indoor", "outdoor"],
+          "description": "Indoor or outdoor activity setting"
+        },
+        "childAge": {
+          "type": "string",
+          "description": "Age or grade of the child"
+        },
+        "interest": {
+          "type": "string",
+          "description": "Optional child interest"
+        },
+        "reflection": {
+          "type": "string",
+          "description": "Optional parent memory note"
+        },
+        "savedAt": {
+          "type": "string",
+          "description": "Server timestamp of record storage"
+        }
+      },
+      "required": ["userId", "activity", "completedAt", "duration", "locationType", "childAge"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/moments/{momentId}": {
+      "schema": "Moment",
+      "description": "User-isolated collection of completed family moments"
+    }
+  }
+}
