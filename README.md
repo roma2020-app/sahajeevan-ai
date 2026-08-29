@@ -4,6 +4,8 @@
 
 > **Small Moments. Strong Families. A Greener Future.**
 
+**🚀 Live Demo:** https://sahajeevan-61315710877.asia-southeast1.run.app
+
 Sahajeevan is an AI-powered family and nature companion designed especially for busy working parents.
 
 The idea is simple:
@@ -397,13 +399,13 @@ This goes beyond a basic Gemini journal or generic chatbot.
 - Firebase Authentication
 - Firestore Security Rules
 - Server-side API credentials
-- Google Cloud Secret Manager for production secrets
+- Secret Manager is the recommended production hardening path
 
 ### Deployment
 
 - Google AI Studio
-- Cloud Run-ready container architecture
-- Google Cloud Secret Manager
+- Google Cloud Run
+- Cloud Run auto-scaling (min instances 0, max instances 1 in the prototype)
 
 ---
 
@@ -623,7 +625,11 @@ Open the local URL shown by the development server.
 
 # ☁️ Cloud Run Deployment
 
-Sahajeevan is designed to be deployable as a containerized application on Google Cloud Run.
+Sahajeevan is deployed as a web application on **Google Cloud Run**.
+
+**Live URL:** https://sahajeevan-61315710877.asia-southeast1.run.app
+
+The current challenge prototype uses the Google AI Studio / Cloud Run deployment flow. For a full production deployment, Secret Manager should be used for the Gemini credential.
 
 A production deployment should use:
 
@@ -637,7 +643,7 @@ Artifact Registry
 Cloud Run
 ```
 
-Before production deployment:
+For a full production deployment:
 
 1. Create/select a Google Cloud project.
 2. Enable Cloud Run.
@@ -650,6 +656,8 @@ Before production deployment:
 9. Configure the required environment variables/secrets.
 10. Verify Firebase Authentication and Firestore access.
 11. Test user isolation after deployment.
+
+The submitted prototype is already deployed and accessible at the live URL above.
 
 ### Example Cloud Run secret configuration
 
@@ -706,15 +714,25 @@ This keeps the Gemini credential outside the source repository.
 
 # 🌐 Demo
 
-### Application
+### Live Application
 
-The Sahajeevan prototype is available through the Google AI Studio shared application.
+Sahajeevan is deployed on Google Cloud Run and is publicly accessible at:
 
-> Add the final public demo URL here.
+**https://sahajeevan-61315710877.asia-southeast1.run.app**
 
 ```text
-DEMO_URL_HERE
+https://sahajeevan-61315710877.asia-southeast1.run.app
 ```
+
+### Google AI Studio
+
+The application was developed and prototyped using Google AI Studio.
+
+### Demo / Showcase
+
+LinkedIn demo video:
+
+https://lnkd.in/p/dwFA7NZr
 
 ### GitHub
 
@@ -809,8 +827,8 @@ Security measures include:
 - UID-based Firestore isolation
 - Firestore Security Rules
 - Server-side Gemini API calls
-- No hardcoded Gemini API keys
-- Secret Manager for production credentials
+- No Gemini API key exposed in the client bundle
+- Server-side Gemini API credential configuration
 - Authenticated access to personal data
 
 ---
