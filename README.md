@@ -20,6 +20,53 @@ Sahajeevan uses Gemini to transform that small amount of available time into a p
 - 💚 Meaningful family memories
 - 🧠 Age-appropriate learning
 
+
+ Tech Stack Used
+
+    AI & LLM:
+
+        Google Gemini API (@google/genai TypeScript SDK)
+
+        Models: gemini-2.5-flash
+
+        Capabilities: Structured JSON schema output, system instructions, real-time multi-turn conversational chat sessions (ai.chats.create) with context and history preservation.
+
+    Cloud & Infrastructure:
+
+        Google Cloud Run: Serverless container execution with auto-scaling and HTTPS ingress.
+
+        Google AI Studio: Cloud deployment pipeline and rapid prototyping.
+
+        Google Cloud Secret Manager (@google-cloud/secret-manager): Production API key and credential resolution with zero client-side exposure.
+
+    Authentication & Database:
+
+        Firebase Authentication: Google Sign-In with OAuth token validation and session lifecycle management.
+
+        Cloud Firestore: Real-time NoSQL cloud document database.
+
+        Firestore Security Rules: Strict UID-scoped data isolation (/users/{userId}/moments/{momentId}).
+
+    Frontend:
+
+        React 19 & TypeScript: Component-based reactive UI architecture.
+
+        Vite: High-performance module bundling and development server.
+
+        Tailwind CSS 4: Responsive styling and botanical theme design system.
+
+        Lucide React & Motion: Fluid micro-interactions and accessible icons.
+
+    Backend:
+
+        Node.js & Express: Secure server-side API proxying, serving client builds, and mediating Gemini / Secret Manager requests.
+
+    Maps & Geospatial:
+
+        Google Maps Platform (@vis.gl/react-google-maps): Maps JavaScript API with Advanced Markers and custom botanical pins.
+
+        HTML5 Geolocation API: Coordinate tagging for family nature spots.
+
 ---
 
 ## 🎯 Problem
