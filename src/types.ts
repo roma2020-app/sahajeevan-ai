@@ -13,6 +13,8 @@ export interface MomentActivity {
   isFallback?: boolean;
 }
 
+export type MemoryFilter = "all" | "1_year_ago" | "2_years_ago" | "3_plus_years_ago" | "favorites";
+
 export interface MomentRecord {
   id?: string;
   activity: MomentActivity;
@@ -25,6 +27,13 @@ export interface MomentRecord {
   reflection?: string;
   rating?: number;
   userId: string;
+  // Memory Map, Photo, Location & Favorite fields
+  latitude?: number;
+  longitude?: number;
+  locationName?: string;
+  photoUrl?: string;
+  description?: string;
+  isFavorite?: boolean;
 }
 
 export interface UserStats {

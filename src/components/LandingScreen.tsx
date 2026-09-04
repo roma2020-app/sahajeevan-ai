@@ -20,6 +20,14 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onAuthSuccess }) =
       console.error("Sign-in failed:", err);
       if (err.code === "auth/popup-blocked" || err.code === "auth/popup-closed-by-user") {
         setError("Pop-up was closed or blocked. You can also click 'Try Guest Demo' below to explore instantly.");
+      } else if (
+        err.message?.includes("requests-from-referer") ||
+        err.code?.includes("requests-from-referer") ||
+        err.message?.includes("blocked")
+      ) {
+        setError(
+          "Firebase API Key Referrer Restriction: In Google Cloud Console > APIs & Services > Credentials, your Firebase Web API key has an HTTP Referrer restriction that is blocking requests from this app's URL. Please set Application Restrictions to 'None' on your Firebase Web API key (standard for Firebase), or add 'https://ais-dev-ywuwy5q5rd6hipt3krbec2-227967583662.asia-east1.run.app/*' and 'https://ais-pre-ywuwy5q5rd6hipt3krbec2-227967583662.asia-east1.run.app/*' to its allowed referrers."
+        );
       } else {
         setError(err.message || "Failed to sign in. Please try again or use Guest Demo.");
       }
@@ -36,7 +44,17 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({ onAuthSuccess }) =
       onAuthSuccess();
     } catch (err: any) {
       console.error("Guest sign-in failed:", err);
-      setError("Unable to start guest session. Please try again.");
+      if (
+        err.message?.includes("requests-from-referer") ||
+        err.code?.includes("requests-from-referer") ||
+        err.message?.includes("blocked")
+      ) {
+        setError(
+          "Firebase API Key Referrer Restriction: In Google Cloud Console > APIs & Services > Credentials, your Firebase Web API key has an HTTP Referrer restriction that is blocking requests from this app's URL. Please set Application Restrictions to 'None' on your Firebase Web API key (standard for Firebase), or add 'https://ais-dev-ywuwy5q5rd6hipt3krbec2-227967583662.asia-east1.run.app/*' and 'https://ais-pre-ywuwy5q5rd6hipt3krbec2-227967583662.asia-east1.run.app/*' to its allowed referrers."
+        );
+      } else {
+        setError(err.message || "Unable to start guest session. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

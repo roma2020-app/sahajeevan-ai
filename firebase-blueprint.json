@@ -42,6 +42,30 @@
           "type": "string",
           "description": "Optional parent memory note"
         },
+        "description": {
+          "type": "string",
+          "description": "Extended memory description"
+        },
+        "latitude": {
+          "type": "number",
+          "description": "Geographic latitude of the memory spot"
+        },
+        "longitude": {
+          "type": "number",
+          "description": "Geographic longitude of the memory spot"
+        },
+        "locationName": {
+          "type": "string",
+          "description": "Named location (e.g. park or nature reserve name)"
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "Optional photo URL for memory preview"
+        },
+        "isFavorite": {
+          "type": "boolean",
+          "description": "Flag marking memory as a family favorite"
+        },
         "savedAt": {
           "type": "string",
           "description": "Server timestamp of record storage"

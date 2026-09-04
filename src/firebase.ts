@@ -17,6 +17,7 @@ import {
   query,
   orderBy,
   deleteDoc,
+  updateDoc,
   serverTimestamp,
   Firestore,
   getDocFromServer
@@ -132,6 +133,36 @@ export async function signOutUser(): Promise<void> {
 }
 
 /**
+ * Recursively cleans an object to strip any `undefined` values and invalid numbers (NaN/Infinity),
+ * because Cloud Firestore strictly rejects `undefined` values in setDoc and updateDoc.
+ */
+export function sanitizeFirestoreData<T extends Record<string, any>>(data: T): Record<string, any> {
+  const clean: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value === undefined) {
+      continue;
+    }
+    // Omit NaN or non-finite numbers
+    if (typeof value === "number" && !Number.isFinite(value)) {
+      continue;
+    }
+    if (
+      value !== null &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      !(value instanceof Date) &&
+      typeof (value as any).toMillis !== "function" &&
+      typeof (value as any).isEqual !== "function"
+    ) {
+      clean[key] = sanitizeFirestoreData(value);
+    } else {
+      clean[key] = value;
+    }
+  }
+  return clean;
+}
+
+/**
  * Save a completed moment to Firestore at:
  * users/{uid}/moments/{momentId}
  */
@@ -141,14 +172,16 @@ export async function saveCompletedMoment(userId: string, moment: Omit<MomentRec
     const momentsCol = collection(db, "users", userId, "moments");
     const momentDocRef = doc(momentsCol);
     
-    const momentData = {
+    const rawMomentData = {
       ...moment,
       id: momentDocRef.id,
       userId,
       savedAt: serverTimestamp()
     };
 
-    await setDoc(momentDocRef, momentData);
+    const cleanMomentData = sanitizeFirestoreData(rawMomentData);
+
+    await setDoc(momentDocRef, cleanMomentData);
     return momentDocRef.id;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, pathForWrite);
@@ -192,6 +225,34 @@ export async function deleteUserMoment(userId: string, momentId: string): Promis
 }
 
 /**
+ * Update an existing moment record (e.g. location, photo, notes, favorite)
+ */
+export async function updateUserMoment(userId: string, momentId: string, updates: Partial<MomentRecord>): Promise<void> {
+  const pathForUpdate = `users/${userId}/moments/${momentId}`;
+  try {
+    const docRef = doc(db, "users", userId, "moments", momentId);
+    const cleanedUpdates = sanitizeFirestoreData({
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+    delete cleanedUpdates.id;
+    delete cleanedUpdates.userId;
+    await updateDoc(docRef, cleanedUpdates);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, pathForUpdate);
+  }
+}
+
+/**
+ * Toggle favorite flag on a moment
+ */
+export async function toggleFavoriteMoment(userId: string, momentId: string, currentStatus: boolean): Promise<boolean> {
+  const newStatus = !currentStatus;
+  await updateUserMoment(userId, momentId, { isFavorite: newStatus });
+  return newStatus;
+}
+
+/**
  * Calculate user streaks and stats from moments
  */
 export function calculateStats(moments: MomentRecord[]) {
@@ -201,7 +262,7 @@ export function calculateStats(moments: MomentRecord[]) {
 
   let totalMinutes = 0;
   moments.forEach(m => {
-    const durationNum = parseInt(m.duration.replace(/\D/g, ""), 10) || 15;
+    const durationNum = typeof m.duration === "number" ? m.duration : parseInt(String(m.duration).replace(/\D/g, ""), 10) || 15;
     totalMinutes += durationNum;
   });
 

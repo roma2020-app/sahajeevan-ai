@@ -5,11 +5,11 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { auth, signOutUser, fetchUserMoments, saveCompletedMoment, deleteUserMoment, calculateStats } from "./firebase";
+import { auth, signOutUser, fetchUserMoments, saveCompletedMoment, deleteUserMoment, updateUserMoment, toggleFavoriteMoment, calculateStats } from "./firebase";
 import { Navbar } from "./components/Navbar";
 import { LandingScreen } from "./components/LandingScreen";
 import { MomentGenerator } from "./components/MomentGenerator";
-import { ActiveMomentCard } from "./components/ActiveMomentCard";
+import { ActiveMomentCard, CompleteMomentOptions } from "./components/ActiveMomentCard";
 import { MemoriesSection } from "./components/MemoriesSection";
 import { ProgressSection } from "./components/ProgressSection";
 import { DurationOption, LocationType, MomentActivity, MomentRecord, UserProfile, UserStats } from "./types";
@@ -99,20 +99,39 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleCompleteMoment = async (reflectionText?: string) => {
+  const handleCompleteMoment = async (options?: CompleteMomentOptions | string) => {
     if (!currentUser || !activeMoment || !momentConfig) return;
 
     setIsSaving(true);
     try {
+      const opts = typeof options === "string" ? { reflection: options } : options || {};
+      
+      const lat = typeof opts.latitude === "number" && Number.isFinite(opts.latitude) 
+        ? opts.latitude 
+        : typeof opts.latitude === "string" && !isNaN(parseFloat(opts.latitude))
+          ? parseFloat(opts.latitude)
+          : undefined;
+          
+      const lng = typeof opts.longitude === "number" && Number.isFinite(opts.longitude)
+        ? opts.longitude
+        : typeof opts.longitude === "string" && !isNaN(parseFloat(opts.longitude))
+          ? parseFloat(opts.longitude)
+          : undefined;
+
       const newRecord: Omit<MomentRecord, "userId"> = {
         activity: activeMoment,
         duration: momentConfig.duration,
         childAge: momentConfig.childAge,
         locationType: momentConfig.locationType,
-        interest: momentConfig.interest,
+        interest: momentConfig.interest || "Nature Exploration",
         createdAt: new Date().toISOString(),
         completedAt: new Date().toISOString(),
-        reflection: reflectionText || ""
+        reflection: opts.reflection?.trim() || "",
+        locationName: opts.locationName?.trim() || (momentConfig.locationType === "outdoor" ? "Neighborhood Green Spot" : "Home Nature Corner"),
+        ...(lat !== undefined ? { latitude: lat } : {}),
+        ...(lng !== undefined ? { longitude: lng } : {}),
+        ...(opts.photoUrl?.trim() ? { photoUrl: opts.photoUrl.trim() } : {}),
+        isFavorite: opts.isFavorite ?? false
       };
 
       const momentId = await saveCompletedMoment(currentUser.uid, newRecord);
@@ -122,13 +141,36 @@ export default function App() {
       
       setActiveMoment(null);
       setMomentConfig(null);
-      showToast("❤️ Moment saved to your Family Memories!");
+      showToast("❤️ Moment saved to your Family Memories & Map!");
       setActiveTab("memories");
     } catch (error) {
       console.error("Error saving moment to Firestore:", error);
       showToast("Saved locally. Could not sync with Firestore.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleUpdateMoment = async (momentId: string, updates: Partial<MomentRecord>) => {
+    if (!currentUser) return;
+    try {
+      await updateUserMoment(currentUser.uid, momentId, updates);
+      setMoments(prev => prev.map(m => m.id === momentId ? { ...m, ...updates } : m));
+      showToast("Memory updated successfully");
+    } catch (err) {
+      console.error("Error updating moment:", err);
+      showToast("Could not update memory.");
+    }
+  };
+
+  const handleToggleFavorite = async (momentId: string, current: boolean) => {
+    if (!currentUser) return;
+    try {
+      const newStatus = await toggleFavoriteMoment(currentUser.uid, momentId, current);
+      setMoments(prev => prev.map(m => m.id === momentId ? { ...m, isFavorite: newStatus } : m));
+      showToast(newStatus ? "Added to Favorites ❤️" : "Removed from Favorites");
+    } catch (err) {
+      console.error("Error toggling favorite:", err);
     }
   };
 
@@ -221,6 +263,8 @@ export default function App() {
               <MemoriesSection
                 moments={moments}
                 onDeleteMoment={handleDeleteMoment}
+                onToggleFavorite={handleToggleFavorite}
+                onUpdateMoment={handleUpdateMoment}
                 onCreateNew={() => {
                   setActiveMoment(null);
                   setActiveTab("dashboard");

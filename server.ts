@@ -203,6 +203,12 @@ Respond with strict JSON adhering to this schema:
   }
 });
 
+// Maps API Key config endpoint (safely provides Maps JS API key for client-side map rendering)
+app.get("/api/config/maps-key", (req, res) => {
+  const key = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY || "";
+  res.json({ apiKey: key });
+});
+
 // Health check endpoint
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", app: "Sahajeevan", time: new Date().toISOString() });
