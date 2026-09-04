@@ -18,7 +18,9 @@ import {
   Compass,
   ExternalLink,
   Layers,
-  Trees
+  Trees,
+  AlertTriangle,
+  RefreshCw
 } from "lucide-react";
 import { MomentRecord } from "../types";
 
@@ -80,6 +82,43 @@ export const MemoryMap: React.FC<MemoryMapProps> = ({
   const [isKeyLoading, setIsKeyLoading] = useState<boolean>(!apiKey);
   const [selectedMoment, setSelectedMoment] = useState<MomentRecord | null>(null);
   const [activeMarkerId, setActiveMarkerId] = useState<string | null>(null);
+  const [mapAuthError, setMapAuthError] = useState<boolean>(false);
+
+  // Catch Google Maps authentication failures and project errors (e.g. ApiProjectMapError)
+  useEffect(() => {
+    const prevAuthFailure = (window as any).gm_authFailure;
+    (window as any).gm_authFailure = () => {
+      setMapAuthError(true);
+      if (typeof prevAuthFailure === "function") {
+        try {
+          prevAuthFailure();
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    const originalConsoleError = console.error;
+    console.error = (...args: any[]) => {
+      const msg = args[0] ? String(args[0]) : "";
+      if (
+        msg.includes("Google Maps JavaScript API error") ||
+        msg.includes("ApiProjectMapError") ||
+        msg.includes("BillingNotEnabledMapError") ||
+        msg.includes("RefererNotAllowedMapError")
+      ) {
+        setMapAuthError(true);
+        console.warn("Caught Google Maps Platform configuration notice:", ...args);
+        return;
+      }
+      originalConsoleError.apply(console, args);
+    };
+
+    return () => {
+      (window as any).gm_authFailure = prevAuthFailure;
+      console.error = originalConsoleError;
+    };
+  }, []);
 
   // Fetch API key from backend if not in Vite env
   useEffect(() => {
@@ -247,9 +286,107 @@ export const MemoryMap: React.FC<MemoryMapProps> = ({
           <span>{mappedMemories.length} Mapped {mappedMemories.length === 1 ? "Memory" : "Memories"}</span>
         </div>
 
-        {/* Map Container - Height is explicitly set to avoid collapse (CF2) */}
-        <div className="h-[480px] sm:h-[540px] w-full">
-          <APIProvider apiKey={apiKey}>
+        {mapAuthError ? (
+          <div className="p-6 sm:p-8 bg-white space-y-6">
+            <div className="flex items-start gap-4 p-4 rounded-xl bg-amber-50/80 border border-amber-200">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="space-y-1.5 text-sm">
+                <h4 className="font-bold text-amber-950">Google Cloud Project Notice: Billing & Authorization Required</h4>
+                <p className="text-amber-900 leading-relaxed text-xs sm:text-sm">
+                  Google Maps reported an <code className="bg-amber-100/80 px-1 py-0.5 rounded font-mono text-xs text-amber-950 font-bold">ApiProjectMapError</code>.
+                  This indicates that the Google Cloud project (<code className="bg-amber-100/80 px-1 py-0.5 rounded font-mono text-xs text-amber-950">peta-idea-jlcf1</code>) associated with your API key needs an active billing account linked (required even for free tier quota), or the <strong>Maps JavaScript API</strong> must be enabled in your Cloud Console.
+                </p>
+                <div className="flex flex-wrap items-center gap-2 pt-2">
+                  <a
+                    href="https://console.cloud.google.com/project/peta-idea-jlcf1/billing/enable"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2E5A44] hover:bg-[#1E3A2B] text-white font-medium text-xs shadow-xs transition-colors"
+                  >
+                    <span>Enable Billing on Project</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <a
+                    href="https://console.cloud.google.com/apis/library/maps-backend.googleapis.com?project=peta-idea-jlcf1"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-amber-300 text-amber-900 hover:bg-amber-100/50 font-medium text-xs transition-colors"
+                  >
+                    <span>Enable Maps JavaScript API</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <button
+                    onClick={() => setMapAuthError(false)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-amber-300 text-amber-900 hover:bg-amber-100/50 font-medium text-xs transition-colors cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Retry Map</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Geotagged spots explorer when map tiles cannot load */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-display font-bold text-sm text-[#1E3A2B] flex items-center gap-2">
+                  <Trees className="w-4 h-4 text-[#2E5A44]" />
+                  <span>Your Geotagged Nature Memories ({mappedMemories.length})</span>
+                </h4>
+                <span className="text-xs text-[#6B665E]">Coordinates recorded</span>
+              </div>
+
+              {mappedMemories.length === 0 ? (
+                <p className="text-xs text-[#6B665E] italic">
+                  No memories with geographical coordinates saved yet. Complete an activity with location enabled to record coordinates.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[360px] overflow-y-auto pr-1">
+                  {mappedMemories.map((m) => (
+                    <div
+                      key={m.id}
+                      onClick={() => handleMarkerClick(m)}
+                      className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+                        selectedMoment?.id === m.id
+                          ? "bg-[#EBF2ED] border-[#2E5A44] shadow-xs"
+                          : "bg-[#FAF8F4] border-[#EAE6DF] hover:border-[#D4E3D8]"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="font-bold text-xs text-[#1E3A2B] line-clamp-1">
+                          {m.activity.title}
+                        </div>
+                        <span className="text-[10px] text-[#6B665E] shrink-0">
+                          {formatDate(m.completedAt)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[11px] text-[#2E5A44] font-medium mt-1">
+                        <MapPin className="w-3 h-3 shrink-0" />
+                        <span className="truncate">
+                          {m.locationName || `${m.latitude?.toFixed(4)}, ${m.longitude?.toFixed(4)}`}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#5A564F] line-clamp-2 mt-1">
+                        {m.description || m.reflection || m.activity.natureLesson}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Map Container - Height is explicitly set to avoid collapse (CF2) */
+          <div className="h-[480px] sm:h-[540px] w-full">
+          <APIProvider
+            apiKey={apiKey}
+            onError={(err) => {
+              console.warn("APIProvider error:", err);
+              setMapAuthError(true);
+            }}
+          >
             <Map
               defaultCenter={defaultCenter}
               defaultZoom={mappedMemories.length > 0 ? 12 : 11}
@@ -388,6 +525,7 @@ export const MemoryMap: React.FC<MemoryMapProps> = ({
             </Map>
           </APIProvider>
         </div>
+      )}
       </div>
 
       {/* When no memories have coordinates yet */}

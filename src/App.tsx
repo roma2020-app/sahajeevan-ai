@@ -99,6 +99,11 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleUpdateActiveMoment = (updated: Partial<MomentActivity>) => {
+    setActiveMoment(prev => prev ? { ...prev, ...updated } : null);
+    showToast("✨ Activity updated with Gemini's refinements!");
+  };
+
   const handleCompleteMoment = async (options?: CompleteMomentOptions | string) => {
     if (!currentUser || !activeMoment || !momentConfig) return;
 
@@ -245,6 +250,7 @@ export default function App() {
                       setActiveMoment(null);
                       setMomentConfig(null);
                     }}
+                    onUpdateActivity={handleUpdateActiveMoment}
                     isSaving={isSaving}
                   />
                 ) : (

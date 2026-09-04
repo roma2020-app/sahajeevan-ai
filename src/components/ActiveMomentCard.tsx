@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { DurationOption, LocationType, MomentActivity } from "../types";
+import { MomentRefinementChat } from "./MomentRefinementChat";
 
 export interface CompleteMomentOptions {
   reflection?: string;
@@ -36,6 +37,7 @@ interface ActiveMomentCardProps {
   interest?: string;
   onComplete: (options: CompleteMomentOptions) => Promise<void>;
   onReset: () => void;
+  onUpdateActivity?: (updated: Partial<MomentActivity>) => void;
   isSaving: boolean;
 }
 
@@ -47,6 +49,7 @@ export const ActiveMomentCard: React.FC<ActiveMomentCardProps> = ({
   interest,
   onComplete,
   onReset,
+  onUpdateActivity,
   isSaving
 }) => {
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
@@ -272,11 +275,26 @@ export const ActiveMomentCard: React.FC<ActiveMomentCardProps> = ({
 
         {/* Quick Parent Low-Stress Tip */}
         {activity.quickTip && (
-          <div className="p-3.5 rounded-lg bg-[#FAF8F4] border border-[#EAE6DF] text-xs text-[#5A564F] flex items-center gap-2.5 mb-7">
+          <div className="p-3.5 rounded-lg bg-[#FAF8F4] border border-[#EAE6DF] text-xs text-[#5A564F] flex items-center gap-2.5 mb-6">
             <Lightbulb className="w-4 h-4 text-[#2E5A44] shrink-0" />
             <span><strong>Zero-stress tip:</strong> {activity.quickTip}</span>
           </div>
         )}
+
+        {/* Multi-Turn AI Refinement Chat with Gemini */}
+        <MomentRefinementChat
+          activity={activity}
+          duration={duration}
+          childAge={childAge}
+          locationType={locationType}
+          interest={interest}
+          onApplyRefinement={(updated) => {
+            if (updated.steps) {
+              setCompletedSteps([]);
+            }
+            onUpdateActivity?.(updated);
+          }}
+        />
 
         {/* Primary Action Button: Complete Moment */}
         <div className="pt-2">

@@ -204,6 +204,130 @@ Respond with strict JSON adhering to this schema:
   }
 });
 
+// POST /api/refine-moment (Multi-turn conversational refinement with Gemini)
+app.post("/api/refine-moment", async (req, res) => {
+  try {
+    const { moment, userConfig, history = [], message } = req.body;
+
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({ success: false, error: "Message is required" });
+    }
+
+    const ai = getGeminiClient();
+
+    if (!ai) {
+      return res.json({
+        success: true,
+        reply: "Here is a mindful adaptation: You can simplify the activity by focusing directly on one sensory observation (e.g. noticing the sounds or colors together for 3-5 quiet minutes).",
+        isFallback: true
+      });
+    }
+
+    // Format conversation history for @google/genai Chat session
+    // Must alternate between user and model roles
+    const formattedHistory = Array.isArray(history)
+      ? history.map((item: any) => ({
+          role: item.role === "model" ? "model" : "user",
+          parts: [{ text: String(item.text || item.content || "") }]
+        }))
+      : [];
+
+    const systemInstruction = `You are the friendly, mindful AI parenting & nature-mentoring assistant for "Sahajeevan" (living harmoniously together with family and nature).
+A parent and their child have generated a nature micro-activity and are having a multi-turn conversation with you to refine, customize, or adapt it.
+
+Current Activity:
+- Title: ${moment?.title || "Nature Connection"}
+- Duration: ${userConfig?.duration || "15 min"}
+- Child Age: ${userConfig?.childAge || "6"}
+- Setting: ${userConfig?.locationType || "outdoor"}
+- Steps:
+${(moment?.steps || []).map((s: string, i: number) => `  ${i + 1}. ${s}`).join("\n")}
+- Nature Lesson: ${moment?.natureLesson || ""}
+- Conversation Prompt: ${moment?.parentPrompt || ""}
+- Quick Tip: ${moment?.quickTip || ""}
+
+Your multi-turn responsibilities:
+1. Answer the parent warmly, gently, and concisely (1-3 short paragraphs). Keep suggestions low-effort and low-stress for a busy parent.
+2. If the user asks for adaptations (e.g. rain, indoor alternatives, toddlers, energetic kids, no supplies, shorter time, bedtime calm):
+   - Explain your recommendation clearly.
+   - ALSO provide an updated activity object formatted inside a single \`\`\`json ... \`\`\` code fence at the end:
+     \`\`\`json
+     {
+       "title": "Refined title if changed",
+       "steps": ["Step 1", "Step 2", "Step 3", "Step 4"],
+       "natureLesson": "Relevant nature lesson",
+       "parentPrompt": "Refined conversation question",
+       "quickTip": "Refined practical tip"
+     }
+     \`\`\`
+3. If the user asks general nature or parenting questions, answer thoughtfully without needing to change the activity steps.`;
+
+    let fullText = "";
+    const candidateModels = ["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-3.8-flash"];
+    let lastError: any = null;
+
+    for (const model of candidateModels) {
+      try {
+        const chat = ai.chats.create({
+          model,
+          config: {
+            systemInstruction,
+            temperature: 0.7
+          },
+          history: formattedHistory
+        });
+
+        const chatResponse = await chat.sendMessage({ message });
+        fullText = chatResponse.text || "";
+        if (fullText) break;
+      } catch (err: any) {
+        console.warn(`Model ${model} error in refine-moment, trying next candidate:`, err?.message || err);
+        lastError = err;
+      }
+    }
+
+    if (!fullText) {
+      // If temporary upstream 503 spikes affect all models, provide an intelligent graceful response
+      return res.json({
+        success: true,
+        reply: `Here is a gentle tip to adapt "${moment?.title || "this moment"}": For ${message.toLowerCase().includes("rain") ? "rainy or wet days" : "this situation"}, bring a small element indoors—like gathering fallen leaves or looking out a cozy window together while observing the weather patterns.`,
+        isFallback: true
+      });
+    }
+
+    // Extract any structured json adaptation if present
+    let updatedActivity: any = null;
+    let replyText = fullText;
+
+    const jsonFenceMatch = fullText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (jsonFenceMatch) {
+      try {
+        const parsed = JSON.parse(jsonFenceMatch[1]);
+        if (parsed && (Array.isArray(parsed.steps) || parsed.title)) {
+          updatedActivity = parsed;
+          // Strip the JSON block from user conversational reply
+          replyText = fullText.replace(/```(?:json)?\s*[\s\S]*?\s*```/, "").trim();
+        }
+      } catch (e) {
+        console.warn("Could not parse JSON block from chat response:", e);
+      }
+    }
+
+    return res.json({
+      success: true,
+      reply: replyText || fullText,
+      updatedActivity,
+      fullText
+    });
+  } catch (error: any) {
+    console.error("Error in multi-turn moment refinement:", error);
+    return res.status(500).json({
+      success: false,
+      error: error?.message || "Failed to refine moment with Gemini"
+    });
+  }
+});
+
 // Maps API Key config endpoint (safely provides Maps JS API key for client-side map rendering)
 app.get("/api/config/maps-key", async (req, res) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
