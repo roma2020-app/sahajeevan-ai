@@ -679,23 +679,57 @@ The actual secret value must never be committed to source control.
 
 # 🔑 Secret Manager Production Pattern
 
-Recommended production architecture:
+Production architecture for credentials and API keys:
 
 ```text
-                  Cloud Run
+                  Cloud Run (sahajeevan)
                      │
-                     │ Secret Access
+                     │ Secret Access (roles/secretmanager.secretAccessor)
                      ▼
-              Secret Manager
+              Secret Manager (peta-idea-jlcf1)
                      │
-                     ▼
-               GEMINI_API_KEY
-                     │
-                     ▼
-              Gemini Server API
+           ┌─────────┴──────────┐
+           ▼                    ▼
+     GEMINI_API_KEY     GOOGLE_MAPS_API_KEY
+           │                    │
+           ▼                    ▼
+      Gemini API         Server Config Endpoint (/api/config/maps-key)
+                                │ (no-store, in-memory)
+                                ▼
+                         Client MemoryMap Component
+                         (Restricted by HTTP Referrer & Maps JS API only)
 ```
 
-This keeps the Gemini credential outside the source repository.
+This keeps secrets outside the source repository, container image, and client-side persistence.
+
+### Google Maps API Key Setup in Secret Manager
+
+1. **Create restricted Maps API key** in Google Cloud Console (`peta-idea-jlcf1`):
+   - **API Restrictions**: Restrict solely to **Maps JavaScript API**.
+   - **Application Restrictions**: Set HTTP Referrers to your live Cloud Run domains:
+     - `https://sahajeevan-61315710877.asia-southeast1.run.app/*`
+     - `http://localhost:*` (for local development)
+
+2. **Add key to Secret Manager**:
+   ```bash
+   echo -n "YOUR_RESTRICTED_MAPS_KEY" | gcloud secrets create GOOGLE_MAPS_API_KEY \
+     --project=peta-idea-jlcf1 \
+     --data-file=-
+   ```
+
+3. **Mount secret to Cloud Run service**:
+   ```bash
+   gcloud run services update sahajeevan \
+     --project=peta-idea-jlcf1 \
+     --region=asia-southeast1 \
+     --set-secrets="GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest"
+   ```
+
+4. **Security Verification**:
+   - The key is resolved server-side by `server/secrets.ts`.
+   - The key is served via `/api/config/maps-key` with `Cache-Control: no-store, private`.
+   - Never saved to `localStorage`, `sessionStorage`, cookies, or Firestore.
+   - Never printed in logs or exception messages.
 
 ---
 

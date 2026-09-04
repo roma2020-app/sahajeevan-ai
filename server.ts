@@ -3,6 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
+import { getGoogleMapsApiKey } from "./server/secrets";
 
 dotenv.config();
 
@@ -204,9 +205,16 @@ Respond with strict JSON adhering to this schema:
 });
 
 // Maps API Key config endpoint (safely provides Maps JS API key for client-side map rendering)
-app.get("/api/config/maps-key", (req, res) => {
-  const key = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY || "";
-  res.json({ apiKey: key });
+app.get("/api/config/maps-key", async (req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  res.setHeader("Pragma", "no-cache");
+  try {
+    const key = await getGoogleMapsApiKey();
+    res.json({ apiKey: key || "" });
+  } catch {
+    // Never expose stack trace or secret metadata
+    res.status(500).json({ apiKey: "", error: "Configuration unavailable" });
+  }
 });
 
 // Health check endpoint

@@ -208,8 +208,22 @@ export const MemoryMap: React.FC<MemoryMapProps> = ({
               </a>
             </li>
             <li>Sign in with your Google Account and accept terms.</li>
-            <li>Copy the minted demo key and set <code className="bg-[#EAE6DF] px-1 py-0.5 rounded text-[#1E3A2B]">GOOGLE_MAPS_API_KEY</code> or <code className="bg-[#EAE6DF] px-1 py-0.5 rounded text-[#1E3A2B]">VITE_GOOGLE_MAPS_API_KEY</code> in your environment secrets.</li>
+            <li>Copy the minted demo key and store it in <strong>Google Cloud Secret Manager</strong> as <code className="bg-[#EAE6DF] px-1 py-0.5 rounded text-[#1E3A2B]">GOOGLE_MAPS_API_KEY</code>, or add it to your environment secrets.</li>
           </ol>
+        </div>
+
+        {/* Cloud Run Secret Manager Production Instructions */}
+        <div className="p-4 rounded-xl bg-[#FAF8F4] border border-[#EAE6DF] space-y-2 mb-6 text-xs text-[#5A564F]">
+          <div className="font-bold text-[#1E3A2B] flex items-center gap-1.5">
+            <Compass className="w-3.5 h-3.5 text-[#2E5A44]" />
+            <span>Google Cloud Secret Manager Integration (Production)</span>
+          </div>
+          <p>
+            Store your restricted Maps key in Secret Manager in project <code className="bg-[#EAE6DF] px-1 rounded text-[#1E3A2B]">peta-idea-jlcf1</code> and attach to Cloud Run service <code className="bg-[#EAE6DF] px-1 rounded text-[#1E3A2B]">sahajeevan</code>:
+          </p>
+          <pre className="bg-[#1E3A2B] text-[#DCE8E0] p-2.5 rounded-lg font-mono text-[11px] overflow-x-auto">
+            echo -n "YOUR_API_KEY" | gcloud secrets create GOOGLE_MAPS_API_KEY --data-file=- --project=peta-idea-jlcf1
+          </pre>
         </div>
 
         {/* Mapped Memories Counter */}
