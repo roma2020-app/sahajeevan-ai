@@ -114,6 +114,19 @@ Completed: August 29, 2026
 
 Users can browse and search their previous memories.
 
+## 🗺️ Interactive Nature Memory Map
+
+Sahajeevan brings family memories to life geographically through the **Nature Memory Map**.
+
+Parents can switch seamlessly between the chronological **Timeline View** and the spatial **Interactive Map View**:
+
+- 📍 **Geotagged Moments**: When saving a completed moment, parents can optionally attach their GPS location with one tap or specify a custom neighborhood green spot (e.g., *"Botanical Garden"*, *"Neighborhood Park"*, *"Balcony Plant Corner"*).
+- 🌿 **Google Maps Platform Integration**: Built using `@vis.gl/react-google-maps` and the Google Maps JavaScript API with high-performance **Advanced Markers**.
+- 🎨 **Botanical Custom Pins**: Map markers are color-coded and themed based on the environment (emerald green for outdoor nature expeditions, soft sage for indoor plant and nature crafts).
+- 💬 **Interactive Memory Cards**: Clicking any map pin reveals an interactive overlay displaying the activity title, duration, child age, memorable quote or reflection, nature lesson takeaway, and attached photo.
+- 🎯 **Privacy & User Isolation**: Coordinates and location details are saved strictly within the authenticated user's private path (`/users/{userId}/moments/{momentId}`). Other users cannot see or access your family's locations or pins.
+- 🔑 **Cloud Secret Manager Security**: The Google Maps API key is securely managed through **Google Cloud Secret Manager** on Cloud Run, fetched in-memory on demand without client-side persistence, and restricted via HTTP referrers and API scopes.
+
 ---
 
 # 🔐 Security & Privacy
@@ -387,6 +400,13 @@ This goes beyond a basic Gemini journal or generic chatbot.
 - Cloud Firestore
 - User-scoped document structure
 - Firestore Security Rules
+
+### Maps & Geolocation
+
+- Google Maps Platform (Maps JavaScript API)
+- `@vis.gl/react-google-maps`
+- Google Maps Advanced Markers & Custom Pin Styling
+- Browser Geolocation API
 
 ### Backend
 
@@ -738,9 +758,12 @@ This keeps secrets outside the source repository, container image, and client-si
 | File / Folder | Purpose |
 |---|---|
 | `src/` | Frontend application |
-| `server.ts` | Server-side API and Gemini integration |
-| `firestore.rules` | Firestore security rules |
-| `firebase-blueprint.json` | Firebase data/security model |
+| `src/components/MemoryMap.tsx` | Interactive Google Maps nature memory explorer with Advanced Markers |
+| `src/components/MemoriesSection.tsx` | Timeline and map view switcher for saved family memories |
+| `server.ts` | Server-side API, Maps key endpoint, and Gemini integration |
+| `server/secrets.ts` | Google Cloud Secret Manager secure credential resolver |
+| `firestore.rules` | Firestore security rules with UID-based isolation |
+| `firebase-blueprint.json` | Firebase data/security model schema |
 | `package.json` | Dependencies and scripts |
 | `README.md` | Project documentation |
 
@@ -793,11 +816,11 @@ Generate Sahajeevan Moment
       ↓
 Gemini generates personalized activity
       ↓
-Complete activity
+Complete activity (with optional GPS / neighborhood green spot)
       ↓
 Save Family Memory
       ↓
-View Family Memories
+View Family Memories (Timeline & Interactive Nature Map)
       ↓
 Verify user isolation
 ```
